@@ -113,7 +113,7 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
       <h1>Futbol 5 Cup</h1>
       <p class="sub">Three teams, each pair plays twice. The top 2 meet in the final.</p>
     </div>
-    <span class="chip off" id="sync" title="Scores are saved only in this browser and are not shared between devices.">Local only</span>
+    <span class="chip off" id="sync" role="status">Connecting…</span>
   </div>
   <div class="cols">
     <div class="stack">
@@ -127,7 +127,7 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
       <section class="panel" aria-labelledby="qh"><h2 id="qh">Squads</h2><div class="squads" id="squads"></div></section>
       <details id="setup">
         <summary>Setup</summary>
-        <p class="muted">Scores are saved on this device and browser only. They are not shared with other visitors.</p>
+        <p class="muted">Scores and settings are shared with everyone. Anyone with the link can edit or reset them.</p>
         <div class="settings" id="settings"></div>
         <div class="btns" style="margin-top:12px" id="resetrow"></div>
       </details>
@@ -139,6 +139,7 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
   var COLORS = ['var(--t0)', 'var(--t1)', 'var(--t2)'];
@@ -156,14 +157,18 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
       order: [0,1,2,3,4,5],
       m: FIX.map(function (f) { return { h: f[0], a: f[1], hs: 0, as: 0, done: false }; }),
       fin: { hs: 0, as: 0, done: false, pen: null },
-      tb: [], start: '18:00', dur: 10, gap: 2
+      tb: [], start: '18:00', dur: 13, gap: 2
     };
   }
   var S = fresh();
-  var db = null, ref = null, timer = null, pending = false, resetArmed = false;
-  var KEY = 'futbol5-cup-v1';
+  var db = null, busy = false, resetArmed = false, queue = [];
+  var KEY = 'futbol5-cup-v1', QUEUE_KEY = 'futbol5-pending-v1';
 
-  try { var raw = localStorage.getItem(KEY); if (raw) S = norm(JSON.parse(raw)); } catch (e) {}
+  try {
+    var raw = localStorage.getItem(KEY), saved = localStorage.getItem(QUEUE_KEY);
+    if (raw) S = norm(JSON.parse(raw));
+    if (saved) queue = JSON.parse(saved);
+  } catch (e) {}
 
   function norm(d) { var f = fresh(); for (var k in f) if (d && d[k] !== undefined) f[k] = d[k]; return f; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -171,15 +176,18 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
   function nm(i) { return esc(NAMES[i]); }
   function dot(i) { return '<span class="dot" style="background:' + COLORS[i] + '"></span>'; }
 
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
-    if (ref) {
-      pending = true; clearTimeout(timer);
-      timer = setTimeout(function () {
-        ref.set(JSON.parse(JSON.stringify(S))).then(function () { pending = false; }, function () { pending = false; setSync(false, 'Not saved'); });
-      }, 350);
-    }
-    render();
+  function cache() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(S));
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    } catch (e) {}
+  }
+  function save(action) {
+    S = applyAction(S, action);
+    queue.push(action);
+    cache(); render();
+    setSync(false, db ? 'Saving…' : 'Offline · changes pending');
+    sync();
   }
   function setSync(on, text) { var el = $('sync'); el.textContent = text; el.className = 'chip' + (on ? '' : ' off'); }
 
@@ -231,6 +239,19 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
     $('tiebox').innerHTML = tb;
   }
 
+  function timerControls(end, startAct, resetAct, id) {
+    var attrs = id == null ? '' : ' data-id="' + id + '"';
+    if (!end) return '<button data-act="' + startAct + '"' + attrs + '>Start match</button>';
+    return '<span class="muted">Time left: <strong data-end="' + end + '"></strong></span>' +
+      '<button data-act="' + resetAct + '"' + attrs + '>Reset timer</button>';
+  }
+  function updateTimers() {
+    document.querySelectorAll('[data-end]').forEach(function (el) {
+      var seconds = Math.max(0, Math.ceil((+el.dataset.end - Date.now()) / 1000));
+      el.textContent = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+    });
+  }
+
   function renderMatches() {
     var h = '';
     S.order.forEach(function (id, k) {
@@ -247,7 +268,7 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
         '<span class="move"><button data-act="mv" data-k="' + k + '" data-d="-1" aria-label="Move earlier"' + (canUp ? '' : ' disabled') + '>↑</button><button data-act="mv" data-k="' + k + '" data-d="1" aria-label="Move later"' + (canDn ? '' : ' disabled') + '>↓</button></span></div>' +
         '<div class="score">' + side(m.h, 'hs') + '<span class="vs">VS</span>' + side(m.a, 'as') + '</div>' +
         '<div class="mfoot"><span class="muted">' + (m.done ? 'Full time' : 'Not finished') + '</span>' +
-        (m.done ? '<button data-act="reopen" data-id="' + id + '">Reopen</button>' : '<button class="primary" data-act="done" data-id="' + id + '">Full time</button>') + '</div></article>';
+        (m.done ? '<button data-act="reopen" data-id="' + id + '">Reopen</button>' : timerControls(m.endsAt, 'start', 'timerreset', id) + '<button class="primary" data-act="done" data-id="' + id + '">Full time</button>') + '</div></article>';
     });
     $('matches').innerHTML = h;
     $('slotinfo').textContent = 'Final at ' + slotTime(6);
@@ -271,7 +292,7 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
         [a, b].map(function (t) { return '<button data-act="pen" data-t="' + t + '"' + (F.pen === t ? ' class="primary"' : '') + (F.done ? ' disabled' : '') + '>' + dot(t) + nm(t) + '</button>'; }).join('') + '</div></div>';
     }
     h += '<div class="mfoot" style="margin-top:12px"><span class="muted">' + (F.done ? 'Full time' : 'Not finished') + '</span>' +
-      (F.done ? '<button data-act="fopen">Reopen</button>' : '<button class="primary" data-act="fdone"' + (level && F.pen == null ? ' disabled' : '') + '>Full time</button>') + '</div>';
+      (F.done ? '<button data-act="fopen">Reopen</button>' : timerControls(F.endsAt, 'fstart', 'ftimerreset', null) + '<button class="primary" data-act="fdone"' + (level && F.pen == null ? ' disabled' : '') + '>Full time</button>') + '</div>';
     if (F.done) {
       var w = F.hs > F.as ? a : F.hs < F.as ? b : F.pen;
       h += '<div class="champ"><span class="muted">CHAMPIONS</span><span class="big">' + dot(w) + nm(w) + '</span></div>';
@@ -292,17 +313,15 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
   }
   var bound = false;
   function onSetting(e) {
-    {
-      var id = e.target.id;
-      if (id === 'st') {
-        var time = /^(\d{1,2}):(\d{2})$/.exec(e.target.value.trim());
-        if (time && +time[1] < 24 && +time[2] < 60) S.start = e.target.value.trim();
-        else e.target.value = S.start;
-      }
-      else if (id === 'du') S.dur = Math.max(1, Math.min(90, +e.target.value || 10));
-      else if (id === 'ga') S.gap = Math.max(0, Math.min(30, +e.target.value || 0));
-      save();
-    }
+    var id = e.target.id, value;
+    if (id === 'st') {
+      var time = /^(\d{1,2}):(\d{2})$/.exec(e.target.value.trim());
+      if (!time || +time[1] >= 24 || +time[2] >= 60) { e.target.value = S.start; return; }
+      value = e.target.value.trim();
+    } else if (id === 'du') value = Math.max(1, Math.min(90, +e.target.value || 13));
+    else if (id === 'ga') value = Math.max(0, Math.min(30, +e.target.value || 0));
+    else return;
+    save({ a: 'setting', id: id, value: value });
   }
   function renderReset() {
     $('resetrow').innerHTML = resetArmed
@@ -312,7 +331,7 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
 
   function render() {
     var st = standings();
-    renderTable(st); renderMatches(); renderFinal(st); renderReset();
+    renderTable(st); renderMatches(); renderFinal(st); renderReset(); updateTimers();
   }
   function renderSquads() {
     $('squads').innerHTML = ROSTERS.map(function (r, i) {
@@ -323,45 +342,86 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
     }).join('');
   }
 
-  // ---- actions
+  // Actions can be replayed on the latest shared state after a concurrent edit.
+  function applyAction(s, x) {
+    var a = x.a, id = +x.id, d = +x.d, k, j, t;
+    if (a === 'g' && !s.m[id].done) s.m[id][x.k] = Math.max(0, s.m[id][x.k] + d);
+    else if (a === 'start' && !s.m[id].done && !s.m[id].endsAt) s.m[id].endsAt = x.end;
+    else if (a === 'timerreset' && !s.m[id].done) s.m[id].endsAt = null;
+    else if (a === 'done') { s.m[id].done = true; s.m[id].endsAt = null; }
+    else if (a === 'reopen') { s.m[id].done = false; s.fin = { hs: 0, as: 0, done: false, pen: null }; s.tb = []; }
+    else if (a === 'mv') {
+      k = s.order.indexOf(id); j = k + d;
+      if (k >= 0 && j >= 0 && j < s.order.length && !s.m[id].done && !s.m[s.order[j]].done) {
+        t = s.order[k]; s.order[k] = s.order[j]; s.order[j] = t;
+      }
+    }
+    else if (a === 'tb' && s.tb.indexOf(+x.i) < 0) s.tb.push(+x.i);
+    else if (a === 'tbclear') s.tb = [];
+    else if (a === 'fg' && !s.fin.done) { s.fin[x.k] = Math.max(0, s.fin[x.k] + d); s.fin.pen = null; }
+    else if (a === 'pen' && !s.fin.done) s.fin.pen = +x.t;
+    else if (a === 'fstart' && !s.fin.done && !s.fin.endsAt) s.fin.endsAt = x.end;
+    else if (a === 'ftimerreset' && !s.fin.done) s.fin.endsAt = null;
+    else if (a === 'fdone') { s.fin.done = true; s.fin.endsAt = null; }
+    else if (a === 'fopen') s.fin.done = false;
+    else if (a === 'setting') s[{ st: 'start', du: 'dur', ga: 'gap' }[x.id]] = x.value;
+    else if (a === 'reset2') { var next = fresh(); next.start = s.start; next.dur = s.dur; next.gap = s.gap; s = next; }
+    return s;
+  }
+
   document.addEventListener('click', function (e) {
     var b = e.target.closest('button[data-act]'); if (!b || b.disabled) return;
-    var a = b.dataset.act, id = +b.dataset.id, d = +b.dataset.d;
-    if (a === 'g') { var m = S.m[id]; m[b.dataset.k] = Math.max(0, m[b.dataset.k] + d); }
-    else if (a === 'done') S.m[id].done = true;
-    else if (a === 'reopen') { S.m[id].done = false; S.fin = { hs: 0, as: 0, done: false, pen: null }; S.tb = []; }
-    else if (a === 'mv') { var k = +b.dataset.k, j = k + d, t = S.order[k]; S.order[k] = S.order[j]; S.order[j] = t; }
-    else if (a === 'tb') S.tb.push(+b.dataset.i);
-    else if (a === 'tbclear') S.tb = [];
-    else if (a === 'fg') { S.fin[b.dataset.k] = Math.max(0, S.fin[b.dataset.k] + d); S.fin.pen = null; }
-    else if (a === 'pen') S.fin.pen = +b.dataset.t;
-    else if (a === 'fdone') S.fin.done = true;
-    else if (a === 'fopen') S.fin.done = false;
-    else if (a === 'reset1') { resetArmed = true; return render(); }
-    else if (a === 'cancel') { resetArmed = false; return render(); }
-    else if (a === 'reset2') { var s0 = S.start, du = S.dur, ga = S.gap; S = fresh(); S.start = s0; S.dur = du; S.gap = ga; resetArmed = false; }
-    save();
+    var a = b.dataset.act;
+    if (a === 'reset1') { resetArmed = true; return render(); }
+    if (a === 'cancel') { resetArmed = false; return render(); }
+    if (a === 'reset2') resetArmed = false;
+    var action = { a: a, d: b.dataset.d, i: b.dataset.i, id: b.dataset.id, k: b.dataset.k, t: b.dataset.t };
+    if (a === 'mv') action.id = S.order[+b.dataset.k];
+    if (a === 'start' || a === 'fstart') action.end = Date.now() + S.dur * 60000;
+    save(action);
   });
 
   buildSettings(); renderSquads(); render();
+  setInterval(updateTimers, 1000);
 
-  // ---- shared storage (optional): everyone with edit access sees the same scores live
-  (window.claude && claude.use ? claude.use('db') : Promise.resolve(null)).then(function (d) {
-    if (!d) return;
-    db = d; ref = db.doc('cup/state'); setSync(true, 'Live · shared');
-    var loading = setTimeout(function () { setSync(false, 'Local only'); }, 10000);
-    ref.onSnapshot(function (snap) {
-      clearTimeout(loading); setSync(true, 'Live · shared');
-      if (pending) return;
-      if (snap.exists) {
-        var next = norm(snap.data());
-        if (JSON.stringify(next) !== JSON.stringify(S)) {
-          S = next; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
-          settingsBuilt = false; buildSettings(); render();
-        }
+  // Fetch, replay pending actions, then use the version to avoid overwriting concurrent edits.
+  async function sync() {
+    if (!db || busy) return;
+    busy = true;
+    try {
+      var result = await db.from('tournament_state').select('state,version').eq('id', 1).single();
+      if (result.error) throw result.error;
+      var state = norm(result.data.state), count = queue.length;
+      for (var i = 0; i < count; i++) state = applyAction(state, queue[i]);
+      if (count) {
+        var update = await db.from('tournament_state').update({ state: state, version: result.data.version + 1 })
+          .eq('id', 1).eq('version', result.data.version).select('version');
+        if (update.error) throw update.error;
+        if (!update.data.length) { busy = false; return sync(); }
+        queue.splice(0, count);
       }
-    }, function () { setSync(false, 'Local only'); });
-  }).catch(function () {});
+      for (var j = 0; j < queue.length; j++) state = applyAction(state, queue[j]);
+      var settingsChanged = S.start !== state.start || S.dur !== state.dur || S.gap !== state.gap;
+      S = state; cache();
+      if (settingsChanged && !$('settings').contains(document.activeElement)) { settingsBuilt = false; buildSettings(); }
+      render();
+      setSync(!queue.length, queue.length ? 'Saving…' : 'Live · shared');
+    } catch (e) {
+      setSync(false, queue.length ? 'Offline · changes pending' : 'Offline · cached');
+    }
+    busy = false;
+    if (queue.length && navigator.onLine) setTimeout(sync, 3000);
+  }
+
+  if (window.supabase) {
+    db = window.supabase.createClient('https://vendjsfhovbbotxliqrs.supabase.co', 'sb_publishable_snE9NUQUJZQ8MZwo5bxFfg_0IfFsRjr');
+    db.channel('tournament').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournament_state' }, sync).subscribe();
+    sync();
+    setInterval(sync, 5000);
+    window.addEventListener('online', sync);
+  } else {
+    setSync(false, 'Offline · changes pending');
+  }
 })();
 </script>
 
