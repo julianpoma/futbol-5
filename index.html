@@ -239,15 +239,20 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
     $('tiebox').innerHTML = tb;
   }
 
-  function timerControls(end, startAct, resetAct, id) {
+  function timerControls(match, prefix, id) {
     var attrs = id == null ? '' : ' data-id="' + id + '"';
-    if (!end) return '<button data-act="' + startAct + '"' + attrs + '>Start match</button>';
-    return '<span class="muted">Time left: <strong data-end="' + end + '"></strong></span>' +
-      '<button data-act="' + resetAct + '"' + attrs + '>Reset timer</button>';
+    var start = prefix + 'start', pause = prefix + 'pause', stop = prefix + 'timerreset';
+    if (!match.endsAt && match.remaining == null) return '<button data-act="' + start + '"' + attrs + '>Start match</button>';
+    var running = !!match.endsAt;
+    var time = running ? 'data-end="' + match.endsAt + '"' : 'data-remaining="' + match.remaining + '"';
+    return '<span class="muted">' + (running ? 'Time left: ' : 'Paused: ') + '<strong ' + time + '></strong></span>' +
+      '<button data-act="' + (running ? pause : start) + '"' + attrs + '>' + (running ? 'Pause' : 'Resume') + '</button>' +
+      '<button data-act="' + stop + '"' + attrs + '>Stop</button>';
   }
   function updateTimers() {
-    document.querySelectorAll('[data-end]').forEach(function (el) {
-      var seconds = Math.max(0, Math.ceil((+el.dataset.end - Date.now()) / 1000));
+    document.querySelectorAll('[data-end], [data-remaining]').forEach(function (el) {
+      var ms = el.dataset.end ? +el.dataset.end - Date.now() : +el.dataset.remaining;
+      var seconds = Math.max(0, Math.ceil(ms / 1000));
       el.textContent = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
     });
   }
@@ -268,7 +273,7 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
         '<span class="move"><button data-act="mv" data-k="' + k + '" data-d="-1" aria-label="Move earlier"' + (canUp ? '' : ' disabled') + '>↑</button><button data-act="mv" data-k="' + k + '" data-d="1" aria-label="Move later"' + (canDn ? '' : ' disabled') + '>↓</button></span></div>' +
         '<div class="score">' + side(m.h, 'hs') + '<span class="vs">VS</span>' + side(m.a, 'as') + '</div>' +
         '<div class="mfoot"><span class="muted">' + (m.done ? 'Full time' : 'Not finished') + '</span>' +
-        (m.done ? '<button data-act="reopen" data-id="' + id + '">Reopen</button>' : timerControls(m.endsAt, 'start', 'timerreset', id) + '<button class="primary" data-act="done" data-id="' + id + '">Full time</button>') + '</div></article>';
+        (m.done ? '<button data-act="reopen" data-id="' + id + '">Reopen</button>' : timerControls(m, '', id) + '<button class="primary" data-act="done" data-id="' + id + '">Full time</button>') + '</div></article>';
     });
     $('matches').innerHTML = h;
     $('slotinfo').textContent = 'Final at ' + slotTime(6);
@@ -292,7 +297,7 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
         [a, b].map(function (t) { return '<button data-act="pen" data-t="' + t + '"' + (F.pen === t ? ' class="primary"' : '') + (F.done ? ' disabled' : '') + '>' + dot(t) + nm(t) + '</button>'; }).join('') + '</div></div>';
     }
     h += '<div class="mfoot" style="margin-top:12px"><span class="muted">' + (F.done ? 'Full time' : 'Not finished') + '</span>' +
-      (F.done ? '<button data-act="fopen">Reopen</button>' : timerControls(F.endsAt, 'fstart', 'ftimerreset', null) + '<button class="primary" data-act="fdone"' + (level && F.pen == null ? ' disabled' : '') + '>Full time</button>') + '</div>';
+      (F.done ? '<button data-act="fopen">Reopen</button>' : timerControls(F, 'f', null) + '<button class="primary" data-act="fdone"' + (level && F.pen == null ? ' disabled' : '') + '>Full time</button>') + '</div>';
     if (F.done) {
       var w = F.hs > F.as ? a : F.hs < F.as ? b : F.pen;
       h += '<div class="champ"><span class="muted">CHAMPIONS</span><span class="big">' + dot(w) + nm(w) + '</span></div>';
@@ -342,13 +347,28 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
     }).join('');
   }
 
+  function applyTimer(match, action, duration) {
+    if (match.done) return;
+    if (action.a === 'start' || action.a === 'fstart') {
+      if (match.endsAt) return;
+      match.endsAt = action.at != null ? action.at + (match.remaining != null ? match.remaining : duration * 60000) : action.end;
+      match.remaining = null;
+    } else if (action.a === 'pause' || action.a === 'fpause') {
+      if (!match.endsAt) return;
+      match.remaining = Math.max(0, match.endsAt - action.at);
+      match.endsAt = null;
+    } else {
+      match.endsAt = null;
+      match.remaining = null;
+    }
+  }
+
   // Actions can be replayed on the latest shared state after a concurrent edit.
   function applyAction(s, x) {
     var a = x.a, id = +x.id, d = +x.d, k, j, t;
     if (a === 'g' && !s.m[id].done) s.m[id][x.k] = Math.max(0, s.m[id][x.k] + d);
-    else if (a === 'start' && !s.m[id].done && !s.m[id].endsAt) s.m[id].endsAt = x.end;
-    else if (a === 'timerreset' && !s.m[id].done) s.m[id].endsAt = null;
-    else if (a === 'done') { s.m[id].done = true; s.m[id].endsAt = null; }
+    else if (a === 'start' || a === 'pause' || a === 'timerreset') applyTimer(s.m[id], x, s.dur);
+    else if (a === 'done') { s.m[id].done = true; s.m[id].endsAt = null; s.m[id].remaining = null; }
     else if (a === 'reopen') { s.m[id].done = false; s.fin = { hs: 0, as: 0, done: false, pen: null }; s.tb = []; }
     else if (a === 'mv') {
       k = s.order.indexOf(id); j = k + d;
@@ -360,9 +380,8 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
     else if (a === 'tbclear') s.tb = [];
     else if (a === 'fg' && !s.fin.done) { s.fin[x.k] = Math.max(0, s.fin[x.k] + d); s.fin.pen = null; }
     else if (a === 'pen' && !s.fin.done) s.fin.pen = +x.t;
-    else if (a === 'fstart' && !s.fin.done && !s.fin.endsAt) s.fin.endsAt = x.end;
-    else if (a === 'ftimerreset' && !s.fin.done) s.fin.endsAt = null;
-    else if (a === 'fdone') { s.fin.done = true; s.fin.endsAt = null; }
+    else if (a === 'fstart' || a === 'fpause' || a === 'ftimerreset') applyTimer(s.fin, x, s.dur);
+    else if (a === 'fdone') { s.fin.done = true; s.fin.endsAt = null; s.fin.remaining = null; }
     else if (a === 'fopen') s.fin.done = false;
     else if (a === 'setting') s[{ st: 'start', du: 'dur', ga: 'gap' }[x.id]] = x.value;
     else if (a === 'reset2') { var next = fresh(); next.start = s.start; next.dur = s.dur; next.gap = s.gap; s = next; }
@@ -377,7 +396,7 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
     if (a === 'reset2') resetArmed = false;
     var action = { a: a, d: b.dataset.d, i: b.dataset.i, id: b.dataset.id, k: b.dataset.k, t: b.dataset.t };
     if (a === 'mv') action.id = S.order[+b.dataset.k];
-    if (a === 'start' || a === 'fstart') action.end = Date.now() + S.dur * 60000;
+    if (a === 'start' || a === 'fstart' || a === 'pause' || a === 'fpause') action.at = Date.now();
     save(action);
   });
 
