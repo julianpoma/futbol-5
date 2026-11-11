@@ -79,8 +79,6 @@ button.danger { color: var(--warn); }
 .match.done { background: var(--soft); }
 .mhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
 .mhead b { color: var(--ink); font-family: var(--font-display); font-size: 14px; }
-.move { display: flex; gap: 4px; }
-.move button { min-height: 32px; padding: 2px 10px; }
 .score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
 .side { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .side .nm { font-weight: 600; text-align: center; overflow-wrap: anywhere; }
@@ -262,15 +260,12 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
     S.order.forEach(function (id, k) {
       var m = S.m[id], rest = [0,1,2].filter(function (t) { return t !== m.h && t !== m.a; })[0];
       var leg = id < 3 ? 'Leg 1' : 'Leg 2';
-      var prev = S.m[S.order[k - 1]], next = S.m[S.order[k + 1]];
-      var canUp = !m.done && k > 0 && !prev.done, canDn = !m.done && k < 5 && !next.done;
       function side(t, key) {
         return '<div class="side"><span class="nm">' + dot(t) + nm(t) + '</span><div class="num" aria-live="polite">' + m[key] + '</div>' +
           '<div class="step"><button data-act="g" data-id="' + id + '" data-k="' + key + '" data-d="-1" aria-label="Remove goal for ' + nm(t) + '"' + (m.done || m[key] <= 0 ? ' disabled' : '') + '>−</button>' +
           '<button data-act="g" data-id="' + id + '" data-k="' + key + '" data-d="1" aria-label="Add goal for ' + nm(t) + '"' + (m.done ? ' disabled' : '') + '>+</button></div></div>';
       }
-      h += '<article class="match' + (m.done ? ' done' : '') + '"><div class="mhead"><span><b>Match ' + (k + 1) + '</b> · ' + slotTime(k) + ' · ' + leg + ' · ' + nm(rest) + ' rests</span>' +
-        '<span class="move"><button data-act="mv" data-k="' + k + '" data-d="-1" aria-label="Move earlier"' + (canUp ? '' : ' disabled') + '>↑</button><button data-act="mv" data-k="' + k + '" data-d="1" aria-label="Move later"' + (canDn ? '' : ' disabled') + '>↓</button></span></div>' +
+      h += '<article class="match' + (m.done ? ' done' : '') + '"><div class="mhead"><span><b>Match ' + (k + 1) + '</b> · ' + slotTime(k) + ' · ' + leg + ' · ' + nm(rest) + ' rests</span></div>' +
         '<div class="score">' + side(m.h, 'hs') + '<span class="vs">VS</span>' + side(m.a, 'as') + '</div>' +
         '<div class="mfoot"><span class="muted">' + (m.done ? 'Full time' : 'Not finished') + '</span>' +
         (m.done ? '<button data-act="reopen" data-id="' + id + '">Reopen</button>' : timerControls(m, '', id) + '<button class="primary" data-act="done" data-id="' + id + '">Full time</button>') + '</div></article>';
@@ -395,7 +390,6 @@ input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; b
     if (a === 'cancel') { resetArmed = false; return render(); }
     if (a === 'reset2') resetArmed = false;
     var action = { a: a, d: b.dataset.d, i: b.dataset.i, id: b.dataset.id, k: b.dataset.k, t: b.dataset.t };
-    if (a === 'mv') action.id = S.order[+b.dataset.k];
     if (a === 'start' || a === 'fstart' || a === 'pause' || a === 'fpause') action.at = Date.now();
     save(action);
   });
