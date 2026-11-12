@@ -1,0 +1,21 @@
+{
+  "id": 1,
+  "state": {
+    "m": [
+      { "a": 1, "h": 0, "as": 2, "hs": 3, "done": true, "endsAt": null, "remaining": null },
+      { "a": 0, "h": 2, "as": 2, "hs": 3, "done": true, "endsAt": null, "remaining": null },
+      { "a": 2, "h": 1, "as": 1, "hs": 1, "done": true, "endsAt": null, "remaining": null },
+      { "a": 0, "h": 1, "as": 2, "hs": 1, "done": true, "endsAt": null, "remaining": null },
+      { "a": 2, "h": 0, "as": 2, "hs": 4, "done": true, "endsAt": null, "remaining": null },
+      { "a": 1, "h": 2, "as": 2, "hs": 3, "done": true, "endsAt": null, "remaining": null }
+    ],
+    "tb": [],
+    "dur": 13,
+    "fin": { "as": 4, "hs": 2, "pen": null, "done": true, "endsAt": null, "remaining": null },
+    "gap": 0,
+    "names": ["T1", "T2", "T3"],
+    "order": [0, 1, 2, 3, 4, 5],
+    "start": "18:20"
+  },
+  "version": 84
+}

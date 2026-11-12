@@ -1,0 +1,16 @@
+{
+  "name": "double-futbol-5-cup",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 4173 --bind 127.0.0.1",
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "playwright test",
+    "test:sql": "node scripts/test-sql.js"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
+    "@playwright/test": "^1.65.0",
+    "@supabase/supabase-js": "^2.119.0"
+  }
+}

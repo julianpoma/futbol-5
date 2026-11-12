@@ -1,441 +1,88 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Futbol 5 Cup</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
-<style>
-/* Layout: leaderboard + final on the left, match schedule on the right; stacks on phones. */
-:root {
-  --bg: #f1f5f0;
-  --surface: #ffffff;
-  --ink: #14231a;
-  --muted: #5a6b5f;
-  --line: #d9e2da;
-  --pitch: #1b7a43;
-  --on-pitch: #ffffff;
-  --soft: #e5f0e7;
-  --warn: #a64b00;
-  --warn-bg: #fdf0e1;
-  --t0: #2563eb;
-  --t1: #e8780f;
-  --t2: #a21caf;
-  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0d1510; --surface: #16211a; --ink: #e8f1ea; --muted: #94a699; --line: #263629;
-    --pitch: #3fcf78; --on-pitch: #07210f; --soft: #1d2f23; --warn: #f5a35b; --warn-bg: #2e2112;
-    --t0: #6b9bff; --t1: #ff9c3d; --t2: #d97ae6; color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0d1510; --surface: #16211a; --ink: #e8f1ea; --muted: #94a699; --line: #263629;
-  --pitch: #3fcf78; --on-pitch: #07210f; --soft: #1d2f23; --warn: #f5a35b; --warn-bg: #2e2112;
-  --t0: #6b9bff; --t1: #ff9c3d; --t2: #d97ae6; color-scheme: dark;
-}
-* { box-sizing: border-box; }
-body {
-  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45;
-  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 20px 40px;
-}
-.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
-h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
-h1 { font-size: 28px; letter-spacing: -0.01em; }
-h2 { font-size: 18px; }
-.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; }
-.sub { color: var(--muted); margin: 4px 0 0; }
-.chip { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 99px; background: var(--soft); color: var(--pitch); }
-.chip.off { background: var(--warn-bg); color: var(--warn); }
-.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 20px; align-items: start; }
-@media (max-width: 800px) { .cols { grid-template-columns: minmax(0, 1fr); } }
-.stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.muted { color: var(--muted); font-size: 13px; }
-.tablewrap { overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; text-align: center; padding: 6px 6px; border-bottom: 1px solid var(--line); }
-td { text-align: center; padding: 10px 6px; border-bottom: 1px solid var(--line); }
-tr:last-child td { border-bottom: 0; }
-th.l, td.l { text-align: left; }
-td.pts { font-family: var(--font-display); font-weight: 700; font-size: 18px; }
-tr.q td { background: var(--soft); }
-tr.q td:first-child { box-shadow: inset 3px 0 0 var(--pitch); }
-.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: baseline; }
-.rank { font-family: var(--font-display); font-weight: 700; color: var(--muted); width: 28px; }
-.team { font-weight: 600; }
-.pill { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--pitch); color: var(--on-pitch); margin-left: 8px; white-space: nowrap; }
-.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
-.alert { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
-.btns { display: flex; flex-wrap: wrap; gap: 8px; }
-button { font: inherit; font-weight: 600; cursor: pointer; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 14px; min-height: 40px; }
-button:hover:not(:disabled) { border-color: var(--pitch); }
-button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--pitch); outline-offset: 2px; }
-button:disabled { opacity: .4; cursor: not-allowed; }
-button.primary { background: var(--pitch); color: var(--on-pitch); border-color: var(--pitch); }
-button.danger { color: var(--warn); }
-.match { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
-.match.done { background: var(--soft); }
-.mhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
-.mhead b { color: var(--ink); font-family: var(--font-display); font-size: 14px; }
-.score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
-.side { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.side .nm { font-weight: 600; text-align: center; overflow-wrap: anywhere; }
-.num { font-family: var(--font-display); font-weight: 700; font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; min-width: 1.4ch; text-align: center; }
-.step { display: flex; gap: 6px; }
-.step button { width: 40px; padding: 0; font-size: 18px; }
-.vs { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .08em; }
-.mfoot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-.final { border: 2px solid var(--pitch); }
-.champ { text-align: center; padding: 18px 8px; display: flex; flex-direction: column; gap: 4px; }
-.champ .big { font-family: var(--font-display); font-size: 30px; font-weight: 700; }
-.waiting { color: var(--muted); }
-details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
-summary { cursor: pointer; font-family: var(--font-display); font-weight: 700; }
-.settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 12px; }
-label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
-input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); min-width: 0; width: 100%; text-transform: none; letter-spacing: 0; font-weight: 500; }
-.squads { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-.squad h3 { font-size: 14px; margin-bottom: 6px; overflow-wrap: anywhere; }
-.squad ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-.squad li { padding: 4px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
-.squad li:last-child { border-bottom: 0; }
-.cap { margin-left: 6px; font-size: 10px; font-weight: 700; background: var(--soft); color: var(--pitch); border-radius: 4px; padding: 1px 5px; }
-.rules { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
-</style>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport">
+  <meta content="#123c2d" name="theme-color">
+  <meta content="Double's onsite football home. One pitch, three teams, unlimited bragging rights." name="description">
+  <title>Double Futbol 5 Cup</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="./styles.css" rel="stylesheet">
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to tournament</a>
+  <div class="app-shell">
+    <header class="masthead">
+      <a aria-label="Double Futbol 5 Cup home" class="brand" href="./"><span aria-hidden="true" class="double-mark">=</span> double<span class="brand-divider"></span><span class="brand-sport">THE FOOTBALL CLUB</span></a>
+      <span class="sync-chip" id="sync" role="status">Connecting…</span>
+    </header>
 
-<div class="wrap">
-  <div class="top">
-    <div>
-      <h1>Futbol 5 Cup</h1>
-      <p class="sub">Three teams, each pair plays twice. The top 2 meet in the final.</p>
-    </div>
-    <span class="chip off" id="sync" role="status">Connecting…</span>
-  </div>
-  <div class="cols">
-    <div class="stack">
-      <section class="panel" aria-labelledby="lb">
-        <div class="panel-head"><h2 id="lb">Leaderboard</h2><span class="muted" id="prog"></span></div>
-        <div class="tablewrap" id="table"></div>
-        <div class="legend"><span>Win 3 pts · Draw 1 · Loss 0</span><span>Ties: goal difference, then goals scored, then penalties</span></div>
-        <div id="tiebox"></div>
-      </section>
-      <section class="panel final" aria-labelledby="fh"><h2 id="fh">Final</h2><div id="final"></div></section>
-      <section class="panel" aria-labelledby="qh"><h2 id="qh">Squads</h2><div class="squads" id="squads"></div></section>
-      <details id="setup">
-        <summary>Setup</summary>
-        <p class="muted">Scores and settings are shared with everyone. Anyone with the link can edit or reset them.</p>
-        <div class="settings" id="settings"></div>
-        <div class="btns" style="margin-top:12px" id="resetrow"></div>
-      </details>
-    </div>
-    <section class="stack" aria-labelledby="sh">
-      <div class="panel-head"><h2 id="sh">Match schedule</h2><span class="muted" id="slotinfo"></span></div>
-      <div class="stack" style="gap:12px" id="matches"></div>
+    <section aria-labelledby="app-title" class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="live-dot"></span> OUT OF OFFICE. ON THE PITCH.</p>
+        <h1 id="app-title">Double<br>Futbol 5 <span>Cup.</span></h1>
+        <p class="hero-description">Good teammates. Questionable first touches.<br>Very serious bragging rights.</p>
+        <div class="hero-tags"><span>5-A-SIDE ENERGY</span><span>100% DOUBLE</span></div>
+      </div>
+      <div aria-hidden="true" class="hero-pitch"><div class="pitch-lines"><span class="pitch-circle"></span><span class="pitch-box left"></span><span class="pitch-box right"></span></div><span class="pitch-ball">✺</span><span class="pitch-caption">LESS SPREADSHEETS.<br>MORE CLEAN SHEETS.</span></div>
     </section>
+
+    <section aria-label="Choose tournament" class="tournament-bar">
+      <label for="onsite-picker">THE ONSITE<select id="onsite-picker"><option>Loading onsites…</option></select></label>
+      <label for="cup-picker">THE CUP<select id="cup-picker"><option>Loading tournaments…</option></select></label>
+      <button class="button-primary" disabled id="new-cup" type="button"><span aria-hidden="true">＋</span> New tournament</button>
+    </section>
+
+    <div class="notice" hidden id="notice" role="status"></div>
+    <div class="notice" hidden id="storage-notice" role="alert">Browser storage is unavailable. Keep this tab open until your changes are live.</div>
+    <div class="notice" hidden id="legacy-notice">This browser has unsent edits from the old app. They are preserved, but will not be applied automatically. Review them before clearing browser data.</div>
+    <div class="notice" hidden id="creation-notice"><span>An unfinished tournament request is saved on this device.</span><button id="retry-create" type="button">Retry creation</button></div>
+
+    <main id="content" tabindex="-1"><div class="empty-state"><span class="empty-icon" aria-hidden="true">⚽</span><h2>Warming up…</h2><p>Fetching the latest from the pitch.</p></div></main>
+
+    <footer><span class="footer-brand">double <b>×</b> fútbol</span><span>Built for the team. Settled on the pitch.</span><span>Shared link · everyone can edit</span></footer>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-(function () {
-  var COLORS = ['var(--t0)', 'var(--t1)', 'var(--t2)'];
-  // Fixed fixtures: three pairs, two legs. h/a = team index.
-  var FIX = [[0,1],[2,0],[1,2],[1,0],[0,2],[2,1]];
-  var NAMES = ['Julian\'s Old Boys', 'La Triple Alianza', 'Manchester Unreconciled'];
-  var ROSTERS = [
-    ['Julian*', 'Facu B', 'Fabri', 'Okt', 'Marin'],
-    ['Fernanda*', 'Uri', 'Luca', 'Facu M', 'Mati'],
-    ['Kenny*', 'Tincho', 'Ivan', 'Melissa', 'Ez']
-  ];
-  function fresh() {
-    return {
-      names: ['T1', 'T2', 'T3'],
-      order: [0,1,2,3,4,5],
-      m: FIX.map(function (f) { return { h: f[0], a: f[1], hs: 0, as: 0, done: false }; }),
-      fin: { hs: 0, as: 0, done: false, pen: null },
-      tb: [], start: '18:00', dur: 13, gap: 2
-    };
-  }
-  var S = fresh();
-  var db = null, busy = false, resetArmed = false, queue = [];
-  var KEY = 'futbol5-cup-v1', QUEUE_KEY = 'futbol5-pending-v1';
+  <dialog aria-labelledby="create-title" class="wide-dialog" id="create-dialog">
+    <form id="create-form">
+      <div class="dialog-head"><div><p class="eyebrow">NEXT STOP: GLORY</p><h2 id="create-title">A new cup. A clean slate.</h2></div><button aria-label="Close new tournament" class="icon-button" data-close="create-dialog" type="button">×</button></div>
+      <p class="muted">Three teams. Two legs. One final. Your existing tournaments stay exactly as they are.</p>
+      <div class="form-grid">
+        <label class="full">Tournament name<input autocomplete="off" maxlength="80" name="name" placeholder="The next legendary Double Cup" required></label>
+        <label>Onsite<select id="create-onsite" name="onsite" required></select></label>
+        <label hidden id="new-onsite-label">New onsite name<input disabled maxlength="80" name="newOnsite" placeholder="e.g. Lisbon · Spring 2027"></label>
+        <label>First kick-off<input name="start" required type="time" value="18:00"></label>
+        <label>Match minutes<input max="90" min="1" name="dur" required type="number" value="13"></label>
+        <label>Break minutes<input max="30" min="0" name="gap" required type="number" value="2"></label>
+      </div>
+      <div class="team-forms" id="team-forms"></div>
+      <p class="form-error" hidden id="create-error" role="alert"></p>
+      <div class="dialog-actions"><button data-close="create-dialog" type="button">Cancel</button><button class="button-primary" id="create-submit" type="submit">Let’s kick off ↗</button></div>
+    </form>
+  </dialog>
 
-  try {
-    var raw = localStorage.getItem(KEY), saved = localStorage.getItem(QUEUE_KEY);
-    if (raw) S = norm(JSON.parse(raw));
-    if (saved) queue = JSON.parse(saved);
-  } catch (e) {}
+  <dialog aria-labelledby="goal-title" id="goal-dialog">
+    <div class="dialog-head"><div><p class="eyebrow" id="goal-eyebrow">GET IN!</p><h2 id="goal-title">Who scored?</h2></div><button aria-label="Close goal picker" class="icon-button" data-close="goal-dialog" type="button">×</button></div>
+    <div id="goal-body"></div>
+  </dialog>
 
-  function norm(d) { var f = fresh(); for (var k in f) if (d && d[k] !== undefined) f[k] = d[k]; return f; }
-  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-  function $(id) { return document.getElementById(id); }
-  function nm(i) { return esc(NAMES[i]); }
-  function dot(i) { return '<span class="dot" style="background:' + COLORS[i] + '"></span>'; }
+  <dialog aria-labelledby="settings-title" id="settings-dialog">
+    <form id="settings-form">
+      <div class="dialog-head"><h2 id="settings-title">Matchday settings</h2><button aria-label="Close settings" class="icon-button" data-close="settings-dialog" type="button">×</button></div>
+      <p class="muted">These settings only affect the selected tournament. Running timers keep their remaining time.</p>
+      <div class="form-grid">
+        <label class="full">First kick-off<input name="start" required type="time"></label>
+        <label>Match minutes<input max="90" min="1" name="dur" required type="number"></label>
+        <label>Break minutes<input max="30" min="0" name="gap" required type="number"></label>
+      </div>
+      <div class="dialog-actions"><button data-close="settings-dialog" type="button">Cancel</button><button class="button-primary" type="submit">Save settings</button></div>
+    </form>
+  </dialog>
 
-  function cache() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(S));
-      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-    } catch (e) {}
-  }
-  function save(action) {
-    S = applyAction(S, action);
-    queue.push(action);
-    cache(); render();
-    setSync(false, db ? 'Saving…' : 'Offline · changes pending');
-    sync();
-  }
-  function setSync(on, text) { var el = $('sync'); el.textContent = text; el.className = 'chip' + (on ? '' : ' off'); }
-
-  // ---- standings
-  function standings() {
-    var r = [0,1,2].map(function (i) { return { i: i, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 }; });
-    var played = 0;
-    S.m.forEach(function (m) {
-      if (!m.done) return; played++;
-      var H = r[m.h], A = r[m.a];
-      H.p++; A.p++; H.gf += m.hs; H.ga += m.as; A.gf += m.as; A.ga += m.hs;
-      if (m.hs > m.as) { H.w++; A.l++; } else if (m.hs < m.as) { A.w++; H.l++; } else { H.d++; A.d++; }
-    });
-    r.forEach(function (x) { x.gd = x.gf - x.ga; x.pts = x.w * 3 + x.d; var t = S.tb.indexOf(x.i); x.tb = t < 0 ? 99 : t; });
-    r.sort(function (a, b) { return b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.tb - b.tb || a.i - b.i; });
-    var complete = played === 6;
-    function same(a, b) { return a.pts === b.pts && a.gd === b.gd && a.gf === b.gf && a.tb === b.tb; }
-    var tied = complete && same(r[1], r[2]);
-    return { rows: r, played: played, complete: complete, tied: tied };
-  }
-
-  function finalists(st) { return st.complete && !st.tied ? [st.rows[0].i, st.rows[1].i] : null; }
-
-  // ---- render
-  function fmt(mins) { var h = Math.floor(mins / 60) % 24, m = mins % 60; return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; }
-  function slotTime(k) {
-    var p = /^(\d{1,2}):(\d{2})$/.exec(S.start || ''); var base = p ? (+p[1]) * 60 + (+p[2]) : 18 * 60;
-    return fmt(base + k * ((+S.dur || 0) + (+S.gap || 0)));
-  }
-
-  function renderTable(st) {
-    var h = '<table><thead><tr><th></th><th class="l">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead><tbody>';
-    st.rows.forEach(function (x, k) {
-      var q = st.complete && !st.tied && k < 2;
-      h += '<tr class="' + (q ? 'q' : '') + '"><td class="rank">' + (k + 1) + '</td><td class="l team">' + dot(x.i) + nm(x.i) + (q ? '<span class="pill">Final</span>' : '') + '</td>' +
-        '<td>' + x.p + '</td><td>' + x.w + '</td><td>' + x.d + '</td><td>' + x.l + '</td><td>' + x.gf + '</td><td>' + x.ga + '</td><td>' + (x.gd > 0 ? '+' : '') + x.gd + '</td><td class="pts">' + x.pts + '</td></tr>';
-    });
-    $('table').innerHTML = h + '</tbody></table>';
-    $('prog').textContent = st.played + ' of 6 matches played';
-    var tb = '';
-    if (st.tied) {
-      var key = st.rows[1], set = st.rows.filter(function (x) { return x.pts === key.pts && x.gd === key.gd && x.gf === key.gf; });
-      tb = '<div class="alert"><b>Tied for a final place.</b><span>Points, goal difference and goals scored are all equal. Play a penalty shoot-out, then tap the teams from best to worst finish.</span><div class="btns">' +
-        set.map(function (x) { return '<button data-act="tb" data-i="' + x.i + '"' + (S.tb.indexOf(x.i) >= 0 ? ' disabled' : '') + '>' + dot(x.i) + nm(x.i) + '</button>'; }).join('') +
-        '<button data-act="tbclear" class="danger">Clear</button></div></div>';
-    } else if (st.complete && S.tb.length) {
-      tb = '<div class="muted">Tie settled by penalties. <button data-act="tbclear" class="danger" style="min-height:32px;padding:2px 10px">Undo</button></div>';
-    }
-    $('tiebox').innerHTML = tb;
-  }
-
-  function timerControls(match, prefix, id) {
-    var attrs = id == null ? '' : ' data-id="' + id + '"';
-    var start = prefix + 'start', pause = prefix + 'pause', stop = prefix + 'timerreset';
-    if (!match.endsAt && match.remaining == null) return '<button data-act="' + start + '"' + attrs + '>Start match</button>';
-    var running = !!match.endsAt;
-    var time = running ? 'data-end="' + match.endsAt + '"' : 'data-remaining="' + match.remaining + '"';
-    return '<span class="muted">' + (running ? 'Time left: ' : 'Paused: ') + '<strong ' + time + '></strong></span>' +
-      '<button data-act="' + (running ? pause : start) + '"' + attrs + '>' + (running ? 'Pause' : 'Resume') + '</button>' +
-      '<button data-act="' + stop + '"' + attrs + '>Stop</button>';
-  }
-  function updateTimers() {
-    document.querySelectorAll('[data-end], [data-remaining]').forEach(function (el) {
-      var ms = el.dataset.end ? +el.dataset.end - Date.now() : +el.dataset.remaining;
-      var seconds = Math.max(0, Math.ceil(ms / 1000));
-      el.textContent = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
-    });
-  }
-
-  function renderMatches() {
-    var h = '';
-    S.order.forEach(function (id, k) {
-      var m = S.m[id], rest = [0,1,2].filter(function (t) { return t !== m.h && t !== m.a; })[0];
-      var leg = id < 3 ? 'Leg 1' : 'Leg 2';
-      function side(t, key) {
-        return '<div class="side"><span class="nm">' + dot(t) + nm(t) + '</span><div class="num" aria-live="polite">' + m[key] + '</div>' +
-          '<div class="step"><button data-act="g" data-id="' + id + '" data-k="' + key + '" data-d="-1" aria-label="Remove goal for ' + nm(t) + '"' + (m.done || m[key] <= 0 ? ' disabled' : '') + '>−</button>' +
-          '<button data-act="g" data-id="' + id + '" data-k="' + key + '" data-d="1" aria-label="Add goal for ' + nm(t) + '"' + (m.done ? ' disabled' : '') + '>+</button></div></div>';
-      }
-      h += '<article class="match' + (m.done ? ' done' : '') + '"><div class="mhead"><span><b>Match ' + (k + 1) + '</b> · ' + slotTime(k) + ' · ' + leg + ' · ' + nm(rest) + ' rests</span></div>' +
-        '<div class="score">' + side(m.h, 'hs') + '<span class="vs">VS</span>' + side(m.a, 'as') + '</div>' +
-        '<div class="mfoot"><span class="muted">' + (m.done ? 'Full time' : 'Not finished') + '</span>' +
-        (m.done ? '<button data-act="reopen" data-id="' + id + '">Reopen</button>' : timerControls(m, '', id) + '<button class="primary" data-act="done" data-id="' + id + '">Full time</button>') + '</div></article>';
-    });
-    $('matches').innerHTML = h;
-    $('slotinfo').textContent = 'Final at ' + slotTime(6);
-  }
-
-  function renderFinal(st) {
-    var f = finalists(st), el = $('final');
-    if (!f) {
-      el.innerHTML = '<p class="waiting" style="margin:0">' + (st.tied ? 'Settle the tie in the leaderboard to set the finalists.' : 'Opens when all 6 group matches are at full time. The top 2 teams play here.') + '</p>';
-      return;
-    }
-    var a = f[0], b = f[1], F = S.fin, level = F.hs === F.as;
-    function side(t, key) {
-      return '<div class="side"><span class="nm">' + dot(t) + nm(t) + '</span><div class="num">' + F[key] + '</div><div class="step">' +
-        '<button data-act="fg" data-k="' + key + '" data-d="-1" aria-label="Remove goal"' + (F.done || F[key] <= 0 ? ' disabled' : '') + '>−</button>' +
-        '<button data-act="fg" data-k="' + key + '" data-d="1" aria-label="Add goal"' + (F.done ? ' disabled' : '') + '>+</button></div></div>';
-    }
-    var h = '<div class="mhead" style="margin-bottom:10px"><span><b>Final</b> · ' + slotTime(6) + '</span></div><div class="score">' + side(a, 'hs') + '<span class="vs">VS</span>' + side(b, 'as') + '</div>';
-    if (level) {
-      h += '<div class="alert" style="margin-top:12px"><span>Level after normal time. Who won the penalty shoot-out?</span><div class="btns">' +
-        [a, b].map(function (t) { return '<button data-act="pen" data-t="' + t + '"' + (F.pen === t ? ' class="primary"' : '') + (F.done ? ' disabled' : '') + '>' + dot(t) + nm(t) + '</button>'; }).join('') + '</div></div>';
-    }
-    h += '<div class="mfoot" style="margin-top:12px"><span class="muted">' + (F.done ? 'Full time' : 'Not finished') + '</span>' +
-      (F.done ? '<button data-act="fopen">Reopen</button>' : timerControls(F, 'f', null) + '<button class="primary" data-act="fdone"' + (level && F.pen == null ? ' disabled' : '') + '>Full time</button>') + '</div>';
-    if (F.done) {
-      var w = F.hs > F.as ? a : F.hs < F.as ? b : F.pen;
-      h += '<div class="champ"><span class="muted">CHAMPIONS</span><span class="big">' + dot(w) + nm(w) + '</span></div>';
-    }
-    el.innerHTML = h;
-  }
-
-  var settingsBuilt = false;
-  function buildSettings() {
-    if (settingsBuilt) return; settingsBuilt = true;
-    var h = '';
-    h += '<label>First kick-off<input id="st" value="' + esc(S.start) + '" placeholder="18:00"></label>' +
-      '<label>Match minutes<input id="du" type="number" min="1" max="90" value="' + S.dur + '"></label>' +
-      '<label>Break minutes<input id="ga" type="number" min="0" max="30" value="' + S.gap + '"></label>';
-    $('settings').innerHTML = h;
-    if (!bound) $('settings').addEventListener('change', onSetting);
-    bound = true;
-  }
-  var bound = false;
-  function onSetting(e) {
-    var id = e.target.id, value;
-    if (id === 'st') {
-      var time = /^(\d{1,2}):(\d{2})$/.exec(e.target.value.trim());
-      if (!time || +time[1] >= 24 || +time[2] >= 60) { e.target.value = S.start; return; }
-      value = e.target.value.trim();
-    } else if (id === 'du') value = Math.max(1, Math.min(90, +e.target.value || 13));
-    else if (id === 'ga') value = Math.max(0, Math.min(30, +e.target.value || 0));
-    else return;
-    save({ a: 'setting', id: id, value: value });
-  }
-  function renderReset() {
-    $('resetrow').innerHTML = resetArmed
-      ? '<span class="muted" style="align-self:center">Clear all scores and the schedule order?</span><button class="danger" data-act="reset2">Yes, reset</button><button data-act="cancel">Cancel</button>'
-      : '<button class="danger" data-act="reset1">Reset tournament</button>';
-  }
-
-  function render() {
-    var st = standings();
-    renderTable(st); renderMatches(); renderFinal(st); renderReset(); updateTimers();
-  }
-  function renderSquads() {
-    $('squads').innerHTML = ROSTERS.map(function (r, i) {
-      return '<div class="squad"><h3>' + dot(i) + nm(i) + '</h3><ul>' + r.map(function (p) {
-        var c = p.slice(-1) === '*';
-        return '<li>' + esc(c ? p.slice(0, -1) : p) + (c ? '<span class="cap">C</span>' : '') + '</li>';
-      }).join('') + '</ul></div>';
-    }).join('');
-  }
-
-  function applyTimer(match, action, duration) {
-    if (match.done) return;
-    if (action.a === 'start' || action.a === 'fstart') {
-      if (match.endsAt) return;
-      match.endsAt = action.at != null ? action.at + (match.remaining != null ? match.remaining : duration * 60000) : action.end;
-      match.remaining = null;
-    } else if (action.a === 'pause' || action.a === 'fpause') {
-      if (!match.endsAt) return;
-      match.remaining = Math.max(0, match.endsAt - action.at);
-      match.endsAt = null;
-    } else {
-      match.endsAt = null;
-      match.remaining = null;
-    }
-  }
-
-  // Actions can be replayed on the latest shared state after a concurrent edit.
-  function applyAction(s, x) {
-    var a = x.a, id = +x.id, d = +x.d, k, j, t;
-    if (a === 'g' && !s.m[id].done) s.m[id][x.k] = Math.max(0, s.m[id][x.k] + d);
-    else if (a === 'start' || a === 'pause' || a === 'timerreset') applyTimer(s.m[id], x, s.dur);
-    else if (a === 'done') { s.m[id].done = true; s.m[id].endsAt = null; s.m[id].remaining = null; }
-    else if (a === 'reopen') { s.m[id].done = false; s.fin = { hs: 0, as: 0, done: false, pen: null }; s.tb = []; }
-    else if (a === 'mv') {
-      k = s.order.indexOf(id); j = k + d;
-      if (k >= 0 && j >= 0 && j < s.order.length && !s.m[id].done && !s.m[s.order[j]].done) {
-        t = s.order[k]; s.order[k] = s.order[j]; s.order[j] = t;
-      }
-    }
-    else if (a === 'tb' && s.tb.indexOf(+x.i) < 0) s.tb.push(+x.i);
-    else if (a === 'tbclear') s.tb = [];
-    else if (a === 'fg' && !s.fin.done) { s.fin[x.k] = Math.max(0, s.fin[x.k] + d); s.fin.pen = null; }
-    else if (a === 'pen' && !s.fin.done) s.fin.pen = +x.t;
-    else if (a === 'fstart' || a === 'fpause' || a === 'ftimerreset') applyTimer(s.fin, x, s.dur);
-    else if (a === 'fdone') { s.fin.done = true; s.fin.endsAt = null; s.fin.remaining = null; }
-    else if (a === 'fopen') s.fin.done = false;
-    else if (a === 'setting') s[{ st: 'start', du: 'dur', ga: 'gap' }[x.id]] = x.value;
-    else if (a === 'reset2') { var next = fresh(); next.start = s.start; next.dur = s.dur; next.gap = s.gap; s = next; }
-    return s;
-  }
-
-  document.addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-act]'); if (!b || b.disabled) return;
-    var a = b.dataset.act;
-    if (a === 'reset1') { resetArmed = true; return render(); }
-    if (a === 'cancel') { resetArmed = false; return render(); }
-    if (a === 'reset2') resetArmed = false;
-    var action = { a: a, d: b.dataset.d, i: b.dataset.i, id: b.dataset.id, k: b.dataset.k, t: b.dataset.t };
-    if (a === 'start' || a === 'fstart' || a === 'pause' || a === 'fpause') action.at = Date.now();
-    save(action);
-  });
-
-  buildSettings(); renderSquads(); render();
-  setInterval(updateTimers, 1000);
-
-  // Fetch, replay pending actions, then use the version to avoid overwriting concurrent edits.
-  async function sync() {
-    if (!db || busy) return;
-    busy = true;
-    try {
-      var result = await db.from('tournament_state').select('state,version').eq('id', 1).single();
-      if (result.error) throw result.error;
-      var state = norm(result.data.state), count = queue.length;
-      for (var i = 0; i < count; i++) state = applyAction(state, queue[i]);
-      if (count) {
-        var update = await db.from('tournament_state').update({ state: state, version: result.data.version + 1 })
-          .eq('id', 1).eq('version', result.data.version).select('version');
-        if (update.error) throw update.error;
-        if (!update.data.length) { busy = false; return sync(); }
-        queue.splice(0, count);
-      }
-      for (var j = 0; j < queue.length; j++) state = applyAction(state, queue[j]);
-      var settingsChanged = S.start !== state.start || S.dur !== state.dur || S.gap !== state.gap;
-      S = state; cache();
-      if (settingsChanged && !$('settings').contains(document.activeElement)) { settingsBuilt = false; buildSettings(); }
-      render();
-      setSync(!queue.length, queue.length ? 'Saving…' : 'Live · shared');
-    } catch (e) {
-      setSync(false, queue.length ? 'Offline · changes pending' : 'Offline · cached');
-    }
-    busy = false;
-    if (queue.length && navigator.onLine) setTimeout(sync, 3000);
-  }
-
-  if (window.supabase) {
-    db = window.supabase.createClient('https://vendjsfhovbbotxliqrs.supabase.co', 'sb_publishable_snE9NUQUJZQ8MZwo5bxFfg_0IfFsRjr');
-    db.channel('tournament').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournament_state' }, sync).subscribe();
-    sync();
-    setInterval(sync, 5000);
-    window.addEventListener('online', sync);
-  } else {
-    setSync(false, 'Offline · changes pending');
-  }
-})();
-</script>
-
-</body></html>
+  <div aria-atomic="true" aria-live="polite" class="toast" hidden id="toast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
+  <script src="./src/app.js" type="module"></script>
+</body>
+</html>
